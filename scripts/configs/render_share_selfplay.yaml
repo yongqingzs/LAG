@@ -1,0 +1,28 @@
+env_name: "MultipleCombat"
+algorithm_name: "mappo"
+scenario_name: "2v2/NoWeapon/HierarchySelfplay"
+experiment_name: "v1"
+seed: 0
+n_training_threads: 1
+n_rollout_threads: 4
+cuda: true
+log_interval: 1
+save_interval: 1
+num_mini_batch: 5
+buffer_size: 3000
+num_env_steps: 1.0e+8
+lr: 3.0e-4
+gamma: 0.99
+ppo_epoch: 4
+clip_params: 0.2
+max_grad_norm: 2
+entropy_coef: 1.0e-3
+hidden_size: "128 128"
+act_hidden_size: "128 128"
+recurrent_hidden_size: 128
+recurrent_hidden_layers: 1
+data_chunk_length: 8
+# model_dir: "./results/MultipleCombat/2v2/NoWeapon/HierarchySelfplay/mappo/v1/run1/"
+model_dir: "/home/chenchen/codes/py/LAG/scripts/results/MultipleCombat/2v2/NoWeapon/HierarchySelfplay/mappo/v1/run1"
+num_agents: 4
+outdir: "./results"

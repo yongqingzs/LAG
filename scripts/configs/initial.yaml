@@ -1,0 +1,3 @@
+train_or_render: 2  # 1: train, 0: render, 2: train and render
+filename: "share_selfplay"
+render_filename: "render_share_selfplay"

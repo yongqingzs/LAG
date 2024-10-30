@@ -8,6 +8,7 @@ user_name="cc"
 use_wandb=true  # 设置为 true 或 false 以启用或禁用 wandb
 wandb_name="fh_jsbsim"
 num_env_steps=1e5
+outdir="../workspace/outputs/"  # "./results"
 
 echo "env is ${env}, scenario is ${scenario}, algo is ${algo}, exp is ${exp}, seed is ${seed}"
 cmd=CUDA_VISIBLE_DEVICES=1 python train/train_jsbsim.py \
@@ -19,6 +20,7 @@ cmd=CUDA_VISIBLE_DEVICES=1 python train/train_jsbsim.py \
     --lr 3e-4 --gamma 0.99 --ppo-epoch 4 --clip-params 0.2 --max-grad-norm 2 --entropy-coef 1e-3 \
     --hidden-size "128 128" --act-hidden-size "128 128" --recurrent-hidden-size 128 --recurrent-hidden-layers 1 --data-chunk-length 8 \
     --user-name ${user_name}\
+    --outdir ${outdir}
 
 if [ "$use_wandb" = true ]; then
     cmd="$cmd --use-wandb --wandb-name ${wandb_name}"

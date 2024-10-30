@@ -79,9 +79,12 @@ def parse_args(args, parser):
     return all_args
 
 
-def main(args):
-    parser = get_config()
-    all_args = parse_args(args, parser)
+def main(args, parse_flag: bool = True):
+    if parse_flag:
+        parser = get_config()
+        all_args = parse_args(args, parser)
+    else:
+        all_args = args
 
     # seed
     np.random.seed(all_args.seed)
@@ -102,8 +105,11 @@ def main(args):
         torch.set_num_threads(all_args.n_training_threads)
 
     # run dir
-    run_dir = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/results") \
-        / all_args.env_name / all_args.scenario_name / all_args.algorithm_name / all_args.experiment_name
+    if all_args.outdir == "/workspace/outputs/":
+        run_dir = Path('/') / all_args.outdir / all_args.env_name / all_args.scenario_name / all_args.algorithm_name / all_args.experiment_name
+    else:
+        run_dir = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) / all_args.outdir\
+            / all_args.env_name / all_args.scenario_name / all_args.algorithm_name / all_args.experiment_name
     if not run_dir.exists():
         os.makedirs(str(run_dir))
 
@@ -164,7 +170,8 @@ def main(args):
 
         if all_args.use_wandb:
             run.finish()
-
+    
+    return run_dir
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")

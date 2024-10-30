@@ -1,0 +1,75 @@
+# prepare
+env_name: "JSBSim"
+algorithm_name: "ppo"
+experiment_name: "check"
+seed: 1
+cuda: False
+n_training_threads: 1
+n_rollout_threads: 4
+num_env_steps: 1.0e+7
+model_dir: null
+use_wandb: false  # 设置为 true 或 false 以启用或禁用 wandb
+user_name: "cc"
+wandb_name: "fh_jsbsim"
+scenario_name: "1v1/NoWeapon/Selfplay"
+
+# outdir
+outdir: "./results"
+
+# replaybuffer
+gamma: 0.99
+buffer_size: 200
+use_proper_time_limits: False
+use_gae: True
+gae_lambda: 0.95
+
+# Network
+hidden_size: "128 128"
+act_hidden_size: "128 128"
+activation_id: 1
+use_feature_normalization: False
+gain: 0.01
+use_prior: False
+
+# Recurrent
+use_recurrent_policy: True
+recurrent_hidden_size: 128
+recurrent_hidden_layers: 1
+data_chunk_length: 10
+
+# Optimizer
+lr: 5.0e-4
+
+#ppo
+ppo_epoch: 10
+clip_param: 0.2
+use_clipped_value_loss: False
+num_mini_batch: 1
+value_loss_coef: 1
+entropy_coef: 0.01
+use_max_grad_norm: True
+max_grad_norm: 2
+
+# selfplay
+use_selfplay: False
+selfplay_algorithm: "sp"
+n_choose_opponents: 1
+init_elo: 1000
+
+# save
+save_interval: 1
+
+# log
+log_interval: 5
+
+# evaluation
+use_eval: False
+n_eval_rollout_threads: 1
+eval_interval: 25
+eval_episodes: 32
+
+#render
+render_opponent_index: "latest"
+render_index: "latest"
+episode_length: 1000
+num_agents: 1

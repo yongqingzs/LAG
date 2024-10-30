@@ -1,0 +1,40 @@
+env_name: "MultipleCombat"
+scenario_name: "2v2/NoWeapon/HierarchySelfplay"
+algorithm_name: "mappo"
+experiment_name: "v1"
+seed: 0
+user_name: "cc"
+use_wandb: false  # 设置为 true 或 false 以启用或禁用 wandb
+wandb_name: "fh_jsbsim"
+num_env_steps: 1.0e+5
+outdir: "./results"
+model_dir: null
+
+# training
+n_training_threads: 1
+n_rollout_threads: 20
+cuda: True
+log_interval: 1
+save_interval: 1
+num_mini_batch: 5
+buffer_size: 3000
+lr: 3.0e-4
+gamma: 0.99
+ppo_epoch: 4
+clip_params: 0.2
+max_grad_norm: 2
+entropy_coef: 1.0e-3
+hidden_size: "128 128"
+act_hidden_size: "128 128"
+recurrent_hidden_size: 128
+recurrent_hidden_layers: 1
+data_chunk_length: 8
+
+use_selfplay: True
+selfplay_algorithm: "fsp"
+n_choose_opponents: 1
+
+use_eval: true
+n_eval_rollout_threads: 1
+eval_interval: 1
+eval_episodes: 1
