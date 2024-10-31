@@ -1,6 +1,8 @@
 import logging
 import time
 from typing import List
+import os
+import json
 
 import numpy as np
 import torch
@@ -70,8 +72,16 @@ class ShareJSBSimRunner(Runner):
         start = time.time()
         self.total_num_steps = 0
         episodes = self.num_env_steps // self.buffer_size // self.n_rollout_threads
+        print("total episodes: ", episodes)
+
+        def measure_time(label, start_time):
+            end_time = time.time()
+            print(f"{label} 执行时间: {end_time - start_time:.6f} 秒")
+            return end_time 
 
         for episode in range(episodes):
+            
+            start_time = time.time()
 
             for step in range(self.buffer_size):
                 # Sample actions
@@ -84,17 +94,22 @@ class ShareJSBSimRunner(Runner):
 
                 # insert data into buffer
                 self.insert(data)
+            start_time = measure_time("数据收集", start_time)
 
             # compute return and update network
             self.compute()
+            start_time = measure_time("计算回报", start_time)
             train_infos = self.train()
+            start_time = measure_time("网络更新", start_time)
 
             # post process
             self.total_num_steps = (episode + 1) * self.buffer_size * self.n_rollout_threads
 
             # save model
             if (episode % self.save_interval == 0) or (episode == episodes - 1):
+                start_time = time.time()
                 self.save(episode)
+                start_time = measure_time("保存模型", start_time)
 
             # log information
             if episode % self.log_interval == 0:
@@ -115,7 +130,9 @@ class ShareJSBSimRunner(Runner):
 
             # eval
             if episode % self.eval_interval == 0 and self.use_eval:
+                start_time = time.time()
                 self.eval(self.total_num_steps)
+                start_time = measure_time("训练评估", start_time)
 
     def warmup(self):
         # reset env
@@ -223,7 +240,7 @@ class ShareJSBSimRunner(Runner):
             # [Selfplay] Load opponent policy
             if self.use_selfplay and total_episodes >= eval_cur_opponent_idx * eval_each_episodes:
                 policy_idx = eval_choose_opponents[eval_cur_opponent_idx]
-                self.eval_opponent_policy.actor.load_state_dict(torch.load(str(self.save_dir) + f'/actor_{policy_idx}.pt'))
+                self.eval_opponent_policy.actor.load_state_dict(torch.load(str(self.save_dir) + f'/actor_{policy_idx}.pt', weights_only=True))
                 self.eval_opponent_policy.prep_rollout()
                 eval_cur_opponent_idx += 1
                 logging.info(f" Load opponent {policy_idx} for evaluation ({total_episodes+1}/{self.eval_episodes})")
@@ -291,6 +308,10 @@ class ShareJSBSimRunner(Runner):
 
     @torch.no_grad()
     def render(self):
+        json_file_path = os.path.join(self.run_dir, f'{self.experiment_name}.json')
+        if not os.path.exists(json_file_path):
+            with open(json_file_path, 'w') as f:
+                json.dump({}, f)
         logging.info("\nStart render ...")
         self.render_opponent_index = self.all_args.render_opponent_index
         render_episode_rewards = 0
@@ -310,6 +331,8 @@ class ShareJSBSimRunner(Runner):
             render_obs = render_obs[:, :self.num_agents // 2, ...]
             render_opponent_masks = np.ones_like(render_masks, dtype=np.float32)
             render_opponent_rnn_states = np.zeros_like(render_rnn_states, dtype=np.float32)
+        step = 0
+        ind_step = [0] * self.num_agents
         while True:
             self.policy.prep_rollout()
             render_actions, render_rnn_states = self.policy.act(np.concatenate(render_obs),
@@ -331,6 +354,15 @@ class ShareJSBSimRunner(Runner):
                 render_actions = np.concatenate((render_actions, render_opponent_actions), axis=1)
             # Obser reward and next obs
             render_obs, render_share_obs, render_rewards, render_dones, render_infos = self.envs.step(render_actions)
+            flat_dones = [item for sublist1 in render_dones for sublist2 in sublist1 for item in sublist2]
+            step += 1
+            for i in range(self.num_agents):
+                if flat_dones[i] == False:
+                    ind_step[i] += 1
+            flat_rewards = [item for sublist1 in render_rewards for sublist2 in sublist1 for item in sublist2]
+            print(f"step:{step}, rewards:{flat_rewards}")
+            bloods = [self.envs.envs[0].agents[agent_id].bloods for agent_id in self.envs.envs[0].agents.keys()]
+            print(f"step:{step}, bloods:{bloods}")
             if self.use_selfplay:
                 render_rewards = render_rewards[:, :self.num_agents // 2, ...]
             render_episode_rewards += render_rewards
@@ -340,10 +372,18 @@ class ShareJSBSimRunner(Runner):
             if self.use_selfplay:
                 render_opponent_obs = render_obs[:, self.num_agents // 2:, ...]
                 render_obs = render_obs[:, :self.num_agents // 2, ...]
-
+            
         render_infos = {}
         render_infos['render_episode_reward'] = render_episode_rewards
-        logging.info("render episode reward of agent: " + str(render_infos['render_episode_reward']))
+        # logging.info("render episode reward of agent: " + str(render_infos['render_episode_reward']))
+        flat_episode = [item for sublist1 in render_episode_rewards for sublist2 in sublist1 for item in sublist2]
+        print("render episode reward of agent: " + str(flat_episode))
+        json_infos = {}
+        json_infos['render_episode_reward'] = flat_episode
+        json_infos['final_bloods'] = bloods
+        json_infos['final_step'] = ind_step
+        with open(json_file_path, 'w') as json_file:
+            json.dump(json_infos, json_file, indent=4, separators=(',', ': '))
 
     def save(self, episode):
         policy_actor_state_dict = self.policy.actor.state_dict()
@@ -360,7 +400,7 @@ class ShareJSBSimRunner(Runner):
         for policy in self.opponent_policy:
             choose_idx = self.selfplay_algo.choose(self.policy_pool)
             choose_opponents.append(choose_idx)
-            policy.actor.load_state_dict(torch.load(str(self.save_dir) + f'/actor_{choose_idx}.pt'))
+            policy.actor.load_state_dict(torch.load(str(self.save_dir) + f'/actor_{choose_idx}.pt', weights_only=True))
             policy.prep_rollout()
         logging.info(f" Choose opponents {choose_opponents} for training")
 
